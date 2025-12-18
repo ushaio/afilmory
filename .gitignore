@@ -4,6 +4,8 @@ dist
 dist-ssr
 *.local
 
+photos/
+
 public/og-image-*.png
 test-svg-font-rendering.png
 test-traditional-font-rendering.png

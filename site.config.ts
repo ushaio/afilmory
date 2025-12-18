@@ -1,6 +1,23 @@
+import fs from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
 import { merge } from 'es-toolkit/compat'
 
-import userConfig from './config.json'
+function loadUserConfig(): Record<string, unknown> {
+  const dirname = path.dirname(fileURLToPath(import.meta.url))
+  const configPath = path.resolve(dirname, 'config.json')
+  const examplePath = path.resolve(dirname, 'config.example.json')
+
+  const resolvedPath = fs.existsSync(configPath) ? configPath : fs.existsSync(examplePath) ? examplePath : null
+  if (!resolvedPath) return {}
+
+  try {
+    return JSON.parse(fs.readFileSync(resolvedPath, 'utf-8')) as Record<string, unknown>
+  } catch {
+    return {}
+  }
+}
 
 export interface SiteConfig {
   name: string
@@ -53,6 +70,6 @@ const defaultConfig: SiteConfig = {
     avatar: 'https://cdn.jsdelivr.net/gh/Afilmory/Afilmory@main/logo.jpg',
   },
 }
-export const siteConfig: SiteConfig = merge(defaultConfig, userConfig) as any
+export const siteConfig: SiteConfig = merge(defaultConfig, loadUserConfig()) as any
 
 export default siteConfig

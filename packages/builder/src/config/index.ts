@@ -1,3 +1,7 @@
+import { existsSync } from 'node:fs'
+import path from 'node:path'
+import { pathToFileURL } from 'node:url'
+
 import { loadConfig } from 'c12'
 import consola from 'consola'
 
@@ -94,15 +98,43 @@ export function resolveBuilderConfig(input: BuilderConfigInput, base?: BuilderCo
 }
 
 export async function loadBuilderConfig(options: LoadBuilderConfigOptions = {}): Promise<BuilderConfig> {
+  const cwd = options.cwd ?? process.cwd()
   const result = await loadConfig<BuilderConfigInput>({
     name: 'builder',
-    cwd: options.cwd ?? process.cwd(),
+    cwd,
     configFile: options.configFile,
     rcFile: false,
     dotenv: false,
   })
 
-  const userConfig = result.config ?? {}
+  let userConfig = result.config ?? {}
+
+  if (!options.configFile && Object.keys(userConfig).length === 0) {
+    const defaultCandidates = ['builder.config.default.ts', 'builder.config.default.mjs', 'builder.config.default.js']
+
+    for (const candidate of defaultCandidates) {
+      const candidatePath = path.resolve(cwd, candidate)
+      if (!existsSync(candidatePath)) continue
+
+      try {
+        const mod = (await import(pathToFileURL(candidatePath).href)) as { default?: unknown }
+        const input = mod.default ?? {}
+        userConfig =
+          typeof input === 'function'
+            ? ((input as () => BuilderConfigInput)() ?? {})
+            : (input as BuilderConfigInput) ?? {}
+
+        if (process.env.DEBUG === '1') {
+          const logger = consola.withTag('CONFIG')
+          logger.info('Using builder config from', candidatePath)
+        }
+      } catch (error) {
+        consola.withTag('CONFIG').warn(`Failed to load fallback builder config: ${candidatePath}`, error)
+      }
+
+      break
+    }
+  }
 
   const config = resolveBuilderConfig(userConfig)
 

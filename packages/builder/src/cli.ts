@@ -186,11 +186,10 @@ function environmentCheck() {
   try {
     execSync('perl -v', { stdio: 'ignore' })
 
-    logger.main.info('Perl 已安装')
-  } catch (err) {
-    console.error(err)
-    logger.main.error('Perl 未安装，请安装 Perl 并重新运行')
-    // eslint-disable-next-line unicorn/no-process-exit
-    process.exit(1)
+    logger.main.info('Perl detected')
+  } catch {
+    logger.main.warn(
+      'Perl not detected; continuing. If EXIF extraction fails, set EXIFTOOL_PATH to a working exiftool binary.',
+    )
   }
 }
